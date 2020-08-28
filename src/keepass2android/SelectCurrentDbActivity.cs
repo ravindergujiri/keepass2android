@@ -29,7 +29,7 @@ using Object = Java.Lang.Object;
 namespace keepass2android
 {
     [Activity(Label = AppNames.AppName, MainLauncher = false, Theme = "@style/MyTheme_Blue", LaunchMode = LaunchMode.SingleInstance)] //caution, see manifest file
-    public class SelectCurrentDbActivity : AppCompatActivity
+    public class SelectCurrentDbActivity : AndroidX.AppCompat.App.AppCompatActivity
     {
         private int ReqCodeOpenNewDb = 1;
         
@@ -188,7 +188,7 @@ namespace keepass2android
             base.OnCreate(savedInstanceState);
             SetContentView(Resource.Layout.open_db_selection);
 
-            var toolbar = FindViewById<Android.Support.V7.Widget.Toolbar>(Resource.Id.mytoolbar);
+            var toolbar = FindViewById<AndroidX.AppCompat.Widget.Toolbar>(Resource.Id.mytoolbar);
 
             SetSupportActionBar(toolbar);
 
@@ -232,8 +232,9 @@ namespace keepass2android
                     //forward to password activity
                     Intent i = new Intent(this, typeof(PasswordActivity));
                     Util.PutIoConnectionToIntent(ioc, i);
-                    i.PutExtra(PasswordActivity.KeyKeyfile, i.GetStringExtra(PasswordActivity.KeyKeyfile));
-                    i.PutExtra(PasswordActivity.KeyPassword, i.GetStringExtra(PasswordActivity.KeyPassword));
+                    i.PutExtra(PasswordActivity.KeyKeyfile, Intent.GetStringExtra(PasswordActivity.KeyKeyfile));
+                    i.PutExtra(PasswordActivity.KeyPassword, Intent.GetStringExtra(PasswordActivity.KeyPassword));
+                    i.PutExtra(PasswordActivity.LaunchImmediately, Intent.GetBooleanExtra(PasswordActivity.LaunchImmediately, false));
                     LaunchingOther = true;
                     StartActivityForResult(i, ReqCodeOpenNewDb);
                 }
@@ -256,6 +257,16 @@ namespace keepass2android
             filter.AddAction(Intents.DatabaseLocked);
             RegisterReceiver(_intentReceiver, filter);
 
+        }
+
+        protected override void OnStop()
+        {
+            if (_intentReceiver != null)
+            {
+                UnregisterReceiver(_intentReceiver);
+                _intentReceiver = null;
+            }
+            base.OnStop();
         }
 
         private bool GetIocFromViewIntent(Intent intent)
@@ -436,7 +447,8 @@ namespace keepass2android
             //by leaving the app with the back button, the user probably wants to cancel the task
             //The activity might be resumed (through Android's recent tasks list), then use a NullTask:
             AppTask = new NullTask();
-            Finish();
+            if (!IsFinishing)
+                Finish();
         }
 
         protected override void OnActivityResult(int requestCode, Result resultCode, Intent data)
@@ -496,11 +508,13 @@ namespace keepass2android
                 case KeePass.ExitCloseAfterTaskComplete:
                     // Do not lock the database
                     SetResult(KeePass.ExitCloseAfterTaskComplete);
-                    Finish();
+                    if (!IsFinishing)
+                        Finish();
                     break;
                 case KeePass.ExitClose:
                     SetResult(KeePass.ExitClose);
-                    Finish();
+                    if (!IsFinishing)
+                        Finish();
                     break;
                 case KeePass.ExitReloadDb:
 

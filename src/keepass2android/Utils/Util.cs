@@ -34,6 +34,8 @@ using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.Hardware.Display;
 using Android.Util;
+using Android.Views.InputMethods;
+using AndroidX.Core.View.InputMethod;
 using KeePassLib.Serialization;
 using Uri = Android.Net.Uri;
 
@@ -539,15 +541,19 @@ namespace keepass2android
             }
         }
 
-		public static bool GetShowKeyboardDuringFingerprintUnlock(Context ctx)
-		{
-				return (PreferenceManager.GetDefaultSharedPreferences(ctx).GetBoolean(
-					ctx.GetString(Resource.String.ShowKeyboardWhileFingerprint_key), true));
-			
-		}
+		
+        public static bool GetCloseDatabaseAfterFailedBiometricQuickUnlock(Context ctx)
+        {
+            return (PreferenceManager.GetDefaultSharedPreferences(ctx).GetBoolean(
+                ctx.GetString(Resource.String.CloseDatabaseAfterFailedBiometricQuickUnlock_key), true));
+
+        }
 
 
-		public static void MoveBottomBarButtons(int btn1Id, int btn2Id, int bottomBarId, Activity context)
+        
+
+
+        public static void MoveBottomBarButtons(int btn1Id, int btn2Id, int bottomBarId, Activity context)
 		{
 			var btn1 = context.FindViewById<Button>(btn1Id);
 			var btn2 = context.FindViewById<Button>(btn2Id);
@@ -634,6 +640,32 @@ namespace keepass2android
 	        }
 	        return hasUnsecureDisplay;
 	    }
-	}
+
+        public static void SetNoPersonalizedLearning(EditText editText)
+        {
+            if (editText == null)
+                return;
+            if ((int) Build.VERSION.SdkInt >= 26)
+                editText.ImeOptions = (ImeAction)EditorInfoCompat.ImeFlagNoPersonalizedLearning;
+            ;
+
+        }
+
+        public static void SetNoPersonalizedLearning(View view)
+        {
+            if (view is ViewGroup vg)
+            {
+                for (int i=0;i<vg.ChildCount;i++)
+                {
+                    SetNoPersonalizedLearning(vg.GetChildAt(i));
+                }
+            }
+
+            if (view is EditText editText)
+            {
+                SetNoPersonalizedLearning(editText);
+            }
+        }
+    }
 }
 

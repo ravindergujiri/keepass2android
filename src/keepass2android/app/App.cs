@@ -45,9 +45,13 @@ using keepass2android.database.edit;
 using KeePassLib.Interfaces;
 using KeePassLib.Utility;
 #if !NoNet
+#if !EXCLUDE_JAVAFILESTORAGE
+using Android.Gms.Common;
 using Keepass2android.Javafilestorage;
 using GoogleDriveFileStorage = keepass2android.Io.GoogleDriveFileStorage;
 using PCloudFileStorage = keepass2android.Io.PCloudFileStorage;
+#endif
+
 #endif
 namespace keepass2android
 {
@@ -97,10 +101,13 @@ namespace keepass2android
 
 	}
 #endif
+
+
+
 	/// <summary>
 	/// Main implementation of the IKp2aApp interface for usage in the real app.
 	/// </summary>
-    public class Kp2aApp: IKp2aApp, ICacheSupervisor
+	public class Kp2aApp: IKp2aApp, ICacheSupervisor
 	{
 	    public void Lock(bool allowQuickUnlock = true)
 	    {
@@ -696,7 +703,7 @@ namespace keepass2android
 #if !NoNet
 							new DropboxFileStorage(Application.Context, this),
 							new DropboxAppFolderFileStorage(Application.Context, this),
-							new GoogleDriveFileStorage(Application.Context, this),
+                            GoogleApiAvailability.Instance.IsGooglePlayServicesAvailable(Application.Context)==ConnectionResult.Success ? new GoogleDriveFileStorage(Application.Context, this) : null,
 							new OneDriveFileStorage(Application.Context, this),
 						    new OneDrive2FullFileStorage(),
 						    new OneDrive2MyFilesFileStorage(),
@@ -710,7 +717,7 @@ namespace keepass2android
 #endif
 #endif
 							new LocalFileStorage(this)
-						};
+						}.Where(fs => fs != null).ToList();
 				}
 				return _fileStorages;
 			}
@@ -791,12 +798,13 @@ namespace keepass2android
 				return prefs.GetBoolean(Application.Context.GetString(Resource.String.CheckForDuplicateUuids_key), true);
 			}
 		}
-#if !NoNet
-		public ICertificateErrorHandler CertificateErrorHandler
+
+#if !NoNet && !EXCLUDE_JAVAFILESTORAGE
+
+            public ICertificateErrorHandler CertificateErrorHandler
 		{
 			get { return new CertificateErrorHandlerImpl(this); }
 		}
-	    
 
 
 	    public class CertificateErrorHandlerImpl : Java.Lang.Object, Keepass2android.Javafilestorage.ICertificateErrorHandler

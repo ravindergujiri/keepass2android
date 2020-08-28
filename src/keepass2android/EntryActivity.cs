@@ -92,7 +92,7 @@ namespace keepass2android
 	{
 		public const String KeyEntry = "entry";
         public const String KeyRefreshPos = "refresh_pos";
-		public const String KeyCloseAfterCreate = "close_after_create";
+		public const String KeyActivateKeyboard = "activate_keyboard";
 		public const String KeyGroupFullPath = "groupfullpath_key";
 
 	    public const int requestCodeBinaryFilename = 42376;
@@ -480,13 +480,13 @@ namespace keepass2android
 
 		
 
-		internal void StartNotificationsService(bool closeAfterCreate)
+		internal void StartNotificationsService(bool activateKeyboard)
 		{
 			Intent showNotIntent = new Intent(this, typeof (CopyToClipboardService));
 			showNotIntent.SetAction(Intents.ShowNotification);
 			showNotIntent.PutExtra(KeyEntry, new ElementAndDatabaseId(App.Kp2a.CurrentDb, Entry).FullId);
 			_appTask.PopulatePasswordAccessServiceIntent(showNotIntent);
-			showNotIntent.PutExtra(KeyCloseAfterCreate, closeAfterCreate);
+			showNotIntent.PutExtra(KeyActivateKeyboard, activateKeyboard);
 
 			StartService(showNotIntent);
 		}
@@ -829,7 +829,7 @@ namespace keepass2android
 			PopulateStandardText(Resource.Id.entry_comment, Resource.Id.entryfield_container_comment, PwDefs.NotesField);
 			RegisterTextPopup(FindViewById<RelativeLayout>(Resource.Id.comment_container),
 							  FindViewById(Resource.Id.comment_vdots), PwDefs.NotesField);
-
+                              
 			PopulateText(Resource.Id.entry_tags, Resource.Id.entryfield_container_tags, concatTags(Entry.Tags));
 			PopulateText(Resource.Id.entry_override_url, Resource.Id.entryfield_container_overrideurl, Entry.OverrideUrl);
 

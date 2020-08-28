@@ -102,6 +102,9 @@ namespace keepass2android
 
             private int CreateCombinedNotification(string entryName, Bitmap entryIcon)
             {
+                Kp2aLog.Log("Create Combined Notifications: " + _hasKeyboard + " " + _hasPassword + " " + _hasUsername +
+                            " " + _hasTotp);
+
                 if ((!_hasUsername) && (!_hasPassword) && (!_hasKeyboard) && (!_hasTotp))
                     return 0;
 
@@ -142,6 +145,8 @@ namespace keepass2android
 
             private int CreateSeparateNotifications(string entryName, Bitmap entryIcon)
             {
+                Kp2aLog.Log("Create Separate Notifications: " + _hasKeyboard + " " + _hasPassword + " " + _hasUsername +
+                            " " + _hasTotp);
                 int numNotifications = 0;
                 if (_hasPassword)
                 {
@@ -347,8 +352,8 @@ namespace keepass2android
                 if (intent.Action == Intents.ShowNotification)
                 {
                     //first time opening the entry -> bring up the notifications
-                    bool closeAfterCreate = intent.GetBooleanExtra(EntryActivity.KeyCloseAfterCreate, false);
-                    DisplayAccessNotifications(entry, closeAfterCreate, searchUrl);
+                    bool activateKeyboard = intent.GetBooleanExtra(EntryActivity.KeyActivateKeyboard, false);
+                    DisplayAccessNotifications(entry, activateKeyboard, searchUrl);
                 }
                 else //UpdateKeyboard
                 {
@@ -429,7 +434,7 @@ namespace keepass2android
 
 
 
-        public void DisplayAccessNotifications(PwEntryOutput entry, bool closeAfterCreate, string searchUrl)
+        public void DisplayAccessNotifications(PwEntryOutput entry, bool activateKeyboard, string searchUrl)
         {
             var hadKeyboardData = ClearNotifications();
 
@@ -483,7 +488,7 @@ namespace keepass2android
                     {
                         //switch rooted
                         bool onlySwitchOnSearch = prefs.GetBoolean(GetString(Resource.String.OpenKp2aKeyboardAutomaticallyOnlyAfterSearch_key), false);
-                        if (closeAfterCreate || (!onlySwitchOnSearch))
+                        if (activateKeyboard || (!onlySwitchOnSearch))
                         {
                             ActivateKp2aKeyboard();
                         }
@@ -492,7 +497,7 @@ namespace keepass2android
                     {
                         //if the app is about to be closed again (e.g. after searching for a URL and returning to the browser:
                         // automatically bring up the Keyboard selection dialog
-                        if ((closeAfterCreate) && prefs.GetBoolean(GetString(Resource.String.OpenKp2aKeyboardAutomatically_key), Resources.GetBoolean(Resource.Boolean.OpenKp2aKeyboardAutomatically_default)))
+                        if ((activateKeyboard) && prefs.GetBoolean(GetString(Resource.String.OpenKp2aKeyboardAutomatically_key), Resources.GetBoolean(Resource.Boolean.OpenKp2aKeyboardAutomatically_default)))
                         {
                             ActivateKp2aKeyboard();
                         }
@@ -510,6 +515,7 @@ namespace keepass2android
 
             if (_numElementsToWaitFor == 0)
             {
+                Kp2aLog.Log("Stopping CopyToClipboardService, created empty notification");
                 StopSelf();
                 return;
             }
@@ -620,9 +626,11 @@ namespace keepass2android
 
         public void OnWaitElementDeleted(int itemId)
         {
+            Kp2aLog.Log("Wait element deleted: " + itemId);
             _numElementsToWaitFor--;
             if (_numElementsToWaitFor <= 0)
             {
+                Kp2aLog.Log("Stopping CopyToClipboardService, no more elements");
                 StopSelf();
             }
             if ((itemId == NotifyKeyboard) || (itemId == NotifyCombined))
@@ -818,8 +826,18 @@ namespace keepass2android
                     //must be enabled in settings first
                     Toast.MakeText(this, Resource.String.please_activate_keyboard, ToastLength.Long).Show();
                     Intent settingsIntent = new Intent(Android.Provider.Settings.ActionInputMethodSettings);
-                    settingsIntent.SetFlags(ActivityFlags.NewTask);
-                    StartActivity(settingsIntent);
+                    try
+                    {
+                        settingsIntent.SetFlags(ActivityFlags.NewTask | ActivityFlags.ExcludeFromRecents);
+                        StartActivity(settingsIntent);
+                    }
+                    catch (Exception e)
+                    {
+                        //seems like on Huawei devices this call can fail. 
+                        Kp2aLog.LogUnexpectedError(e);
+                        Toast.MakeText(this, "Failed to switch keyboard.", ToastLength.Long).Show();
+
+                    }
                 }
                 else
                 {
@@ -835,7 +853,20 @@ namespace keepass2android
                     }
                     if (mustUseHelperActivity)
                     {
-                        StartActivity(typeof(SwitchImeActivity));
+                        try
+                        {
+                            Intent switchImeIntent = new Intent(this, typeof(SwitchImeActivity));
+                            switchImeIntent.SetFlags(ActivityFlags.NewTask | ActivityFlags.ExcludeFromRecents);
+                            StartActivity(switchImeIntent);
+                        }
+                        catch (Exception e)
+                        {
+                            //seems like on Huawei devices this call can fail. 
+                            Kp2aLog.LogUnexpectedError(e);
+                            Toast.MakeText(this, "Failed to switch keyboard.", ToastLength.Long).Show();
+
+                        }
+                        
                     }
                     else
                     {
@@ -887,7 +918,7 @@ namespace keepass2android
             if (App.Kp2a.LastOpenedEntry == null)
             {
                 Intent i = new Intent(context, typeof(AppKilledInfo));
-                i.SetFlags(ActivityFlags.ClearTask | ActivityFlags.NewTask);
+                i.SetFlags(ActivityFlags.ClearTask | ActivityFlags.NewTask | ActivityFlags.ExcludeFromRecents);
                 context.StartActivity(i);
                 return;
             }
